@@ -12,13 +12,14 @@ export async function updateSession(request: NextRequest) {
         getAll() {
           return request.cookies.getAll()
         },
-        setAll(cookiesToSet: { name: string; value: string; options?: Record<string, unknown> }[]) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        setAll(cookiesToSet: { name: string; value: string; options?: any }[]) {
           cookiesToSet.forEach(({ name, value }) =>
             request.cookies.set(name, value)
           )
           supabaseResponse = NextResponse.next({ request })
           cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options as Parameters<typeof supabaseResponse.cookies.set>[2])
+            supabaseResponse.cookies.set(name, value, options)
           )
         },
       },
@@ -31,7 +32,6 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  // Public routes that don't require auth
   const publicPaths = ['/', '/login', '/signup', '/directory']
   const isPublic =
     publicPaths.some((p) => pathname === p || pathname.startsWith(p)) ||
@@ -46,7 +46,6 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(redirectUrl)
   }
 
-  // Role-based guard for dashboard routes
   if (user && (pathname.startsWith('/brand') || pathname.startsWith('/manufacturer'))) {
     const { data: profile } = await supabase
       .from('profiles')
