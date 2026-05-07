@@ -86,6 +86,9 @@ export default function NewRequestPage() {
               onChange={(e) => setDescription(e.target.value)}
               required
             />
+            <p className="mt-1.5 text-xs text-amber-600 font-medium">
+              💡 Include your email, WhatsApp number, or Instagram handle so manufacturers can reach you directly.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-4">

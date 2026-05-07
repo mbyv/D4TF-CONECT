@@ -151,11 +151,14 @@ export default function SendOfferPage() {
             <textarea
               id="message"
               className="input h-32 resize-none"
-              placeholder={`Introduce your factory, mention your MOQ, production capacity, lead time, and why you're a great fit. Include your WhatsApp or email here too — brands use this to contact you.`}
+              placeholder={`Introduce your factory, mention your MOQ, production capacity, lead time, and why you're a great fit.`}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               required
             />
+            <p className="mt-1.5 text-xs text-amber-600 font-medium">
+              💡 Include your email, WhatsApp number, or Instagram handle so the brand can contact you directly.
+            </p>
           </div>
 
           {error && <ErrorMessage message={error} />}
