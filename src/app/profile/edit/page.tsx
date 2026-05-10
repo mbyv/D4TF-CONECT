@@ -57,7 +57,7 @@ export default function EditProfilePage() {
         setName(p.name ?? '')
         setBio(p.bio ?? '')
         setCity(p.city ?? '')
-        setCountry(p.country ?? '')
+        setCountry(p.country ?? 'United Kingdom')
       }
       setPortfolio((portfolioRes.data ?? []) as PortfolioItem[])
       setLinks((linksRes.data ?? []) as ProfileLink[])
@@ -200,7 +200,13 @@ export default function EditProfilePage() {
               </div>
               <div>
                 <label className="label">Country</label>
-                <input type="text" className="input" placeholder="e.g. UK" value={country} onChange={(e) => setCountry(e.target.value)} />
+                <input
+                  type="text"
+                  className="input bg-gray-50 text-gray-500 cursor-not-allowed"
+                  value="United Kingdom 🇬🇧"
+                  readOnly
+                  title="D4TF Connect is currently UK-only"
+                />
               </div>
             </div>
             {profileError && <ErrorMessage message={profileError} />}

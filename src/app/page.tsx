@@ -31,13 +31,13 @@ export default async function LandingPage() {
 
       {/* Hero */}
       <section className="max-w-5xl mx-auto px-4 pt-20 pb-16 text-center">
-        <span className="badge bg-brand-100 text-brand-700 mb-4">B2B Fashion Marketplace</span>
+        <span className="badge bg-brand-100 text-brand-700 mb-4">🇬🇧 UK B2B Fashion Marketplace</span>
         <h1 className="text-4xl sm:text-5xl font-bold text-gray-900 leading-tight">
-          Fashion Brands.<br />
-          <span className="text-brand-600">Meet Manufacturers.</span>
+          UK Fashion Brands.<br />
+          <span className="text-brand-600">Meet UK Manufacturers.</span>
         </h1>
         <p className="mt-5 text-lg text-gray-500 max-w-xl mx-auto">
-          D4TF Connect cuts out the middleman. Brands post production requests.
+          D4TF Connect is the UK&apos;s B2B fashion marketplace. Brands post production requests.
           Manufacturers send competitive offers. Pay only per action — no subscriptions.
         </p>
         <div className="mt-8 flex flex-col sm:flex-row gap-3 justify-center">
@@ -53,27 +53,28 @@ export default async function LandingPage() {
       {/* How it works */}
       <section className="bg-gray-50 py-16">
         <div className="max-w-5xl mx-auto px-4">
+          <p className="text-center text-sm text-gray-400 mb-8">🇬🇧 Currently available to UK-based brands and manufacturers only</p>
           <h2 className="text-2xl font-bold text-center text-gray-900 mb-12">How it works</h2>
           <div className="grid sm:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="w-12 h-12 rounded-full bg-brand-100 flex items-center justify-center mx-auto mb-4 text-2xl">🏷️</div>
-              <h3 className="font-semibold text-gray-900 mb-2">Brand posts a request</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">UK Brand posts a request</h3>
               <p className="text-sm text-gray-500">
                 Describe your production run — garment type, quantity, budget, and deadline.
               </p>
             </div>
             <div className="text-center">
               <div className="w-12 h-12 rounded-full bg-brand-100 flex items-center justify-center mx-auto mb-4 text-2xl">🏭</div>
-              <h3 className="font-semibold text-gray-900 mb-2">Manufacturers send offers</h3>
+              <h3 className="font-semibold text-gray-900 mb-2">UK Manufacturers send offers</h3>
               <p className="text-sm text-gray-500">
-                Verified manufacturers browse the live feed and send competitive offers (£3 per offer).
+                UK manufacturers browse the live feed and send competitive offers (£3 per offer).
               </p>
             </div>
             <div className="text-center">
               <div className="w-12 h-12 rounded-full bg-brand-100 flex items-center justify-center mx-auto mb-4 text-2xl">🤝</div>
               <h3 className="font-semibold text-gray-900 mb-2">Brand picks the best fit</h3>
               <p className="text-sm text-gray-500">
-                Review portfolios, click through to Instagram or WhatsApp, and proceed off-platform.
+                Review portfolios, contact via WhatsApp or email, and proceed off-platform.
               </p>
             </div>
           </div>

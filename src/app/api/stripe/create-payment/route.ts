@@ -79,10 +79,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: pendingError.message }, { status: 500 })
     }
 
-    // Create Stripe Checkout Session
+    // Create Stripe Checkout Session (UK only)
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       currency: 'gbp',
+      payment_method_types: ['card'],
+      billing_address_collection: 'required',
       line_items: [
         {
           price_data: {

@@ -53,7 +53,8 @@ export default function SignupPage() {
     <div className="w-full max-w-sm">
       <div className="card p-8">
         <h1 className="text-xl font-bold text-gray-900 mb-1">Create your account</h1>
-        <p className="text-sm text-gray-500 mb-6">Join the D4TF Connect marketplace</p>
+        <p className="text-sm text-gray-500 mb-1">Join the D4TF Connect marketplace</p>
+        <p className="text-xs text-amber-600 font-medium mb-5">🇬🇧 UK-based businesses only</p>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Role Selector */}
