@@ -118,14 +118,30 @@ export default function EditProfilePage() {
 
   // ── Phone OTP ──────────────────────────────────────────────────────────────
 
+  function formatUkPhone(raw: string): string {
+    let n = raw.trim().replace(/\s+/g, '').replace(/[^\d+]/g, '')
+    if (n.startsWith('+44')) return n
+    if (n.startsWith('0')) n = n.slice(1)
+    return '+44' + n
+  }
+
+  function isValidUkMobile(raw: string): boolean {
+    const n = raw.trim().replace(/\s+/g, '').replace(/[^\d]/g, '')
+    // Accept 07xxxxxxxxx (11 digits) or 7xxxxxxxxx (10 digits)
+    const local = n.startsWith('0') ? n.slice(1) : n
+    return /^7\d{9}$/.test(local)
+  }
+
   async function sendOtp() {
-    setSendingOtp(true)
     setPhoneError('')
 
-    // Format as E.164 UK number
-    let formatted = phone.trim().replace(/\s/g, '')
-    if (formatted.startsWith('0')) formatted = '+44' + formatted.slice(1)
-    if (!formatted.startsWith('+44')) formatted = '+44' + formatted
+    if (!isValidUkMobile(phone)) {
+      setPhoneError('Please enter a valid UK mobile number (e.g. 07700 900 000).')
+      return
+    }
+
+    setSendingOtp(true)
+    const formatted = formatUkPhone(phone)
 
     const { error } = await supabase.auth.updateUser({ phone: formatted })
 
@@ -324,22 +340,31 @@ export default function EditProfilePage() {
           ) : (
             <div className="space-y-3">
               {!otpSent ? (
-                <div className="flex gap-2">
-                  <input
-                    type="tel"
-                    className="input flex-1"
-                    placeholder="e.g. 07700 900 000"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                  />
-                  <button
-                    onClick={sendOtp}
-                    className="btn-primary shrink-0"
-                    disabled={sendingOtp || !phone.trim()}
-                  >
-                    {sendingOtp ? 'Sending…' : 'Send code'}
-                  </button>
-                </div>
+                <>
+                  <div className="flex rounded-lg border border-gray-300 overflow-hidden focus-within:ring-2 focus-within:ring-brand-500 focus-within:border-brand-500">
+                    <span className="flex items-center gap-1.5 px-3 bg-gray-50 border-r border-gray-300 text-sm text-gray-600 shrink-0 select-none">
+                      🇬🇧 +44
+                    </span>
+                    <input
+                      type="tel"
+                      className="flex-1 px-3 py-2 text-sm outline-none bg-white"
+                      placeholder="7700 900 000"
+                      value={phone.replace(/^\+44/, '').replace(/^0/, '')}
+                      onChange={(e) => setPhone(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={sendOtp}
+                      className="btn-primary rounded-none shrink-0 border-l border-brand-600"
+                      disabled={sendingOtp || !phone.trim()}
+                    >
+                      {sendingOtp ? 'Sending…' : 'Send code'}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-400">
+                    🇬🇧 UK mobile numbers only (e.g. 07700 900 000)
+                  </p>
+                </>
               ) : (
                 <div className="space-y-3">
                   <p className="text-xs text-gray-500">
