@@ -1,9 +1,10 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
-import { ProductionRequest, Profile } from '@/lib/types'
+import { ProductionRequest, Profile, VerificationTier } from '@/lib/types'
 import { formatDate, formatCurrency, formatQuantity } from '@/lib/utils'
 import EmptyState from '@/components/ui/EmptyState'
+import VerificationBadge from '@/components/profile/VerificationBadge'
 
 export default async function ManufacturerDashboard() {
   const supabase = createClient()
@@ -90,9 +91,10 @@ export default async function ManufacturerDashboard() {
                       >
                         {req.brand?.name ?? 'Brand'}
                       </Link>
-                      {req.brand?.verified && (
-                        <span className="badge bg-blue-100 text-blue-700 text-[10px]">✓ Verified</span>
-                      )}
+                      <VerificationBadge
+                        tier={(req.brand?.verification_tier as VerificationTier) ?? 'unverified'}
+                        size="sm"
+                      />
                     </div>
                     <h3 className="font-semibold text-gray-900 leading-tight">{req.title}</h3>
                     <p className="mt-1 text-sm text-gray-500 line-clamp-2">{req.description}</p>

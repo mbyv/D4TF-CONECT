@@ -5,6 +5,7 @@ export type ActionType =
   | 'manufacturer_send_offer'
   | 'manufacturer_accept_offer'
 export type LinkType = 'instagram' | 'website' | 'whatsapp' | 'email'
+export type VerificationTier = 'unverified' | 'basic' | 'verified' | 'trusted'
 
 export interface Profile {
   id: string
@@ -15,6 +16,13 @@ export interface Profile {
   country: string | null
   profile_image_url: string | null
   verified: boolean
+  // Verification fields
+  phone: string | null
+  phone_verified: boolean
+  companies_house_number: string | null
+  companies_house_name: string | null
+  companies_house_verified: boolean
+  verification_tier: VerificationTier
   created_at: string
 }
 
@@ -75,4 +83,42 @@ export interface ActionPayment {
     message: string
   } | null
   created_at: string
+}
+
+// Verification tier metadata
+export const TIER_CONFIG: Record<VerificationTier, {
+  label: string
+  color: string
+  bg: string
+  icon: string
+  description: string
+}> = {
+  unverified: {
+    label: 'Unverified',
+    color: 'text-gray-500',
+    bg: 'bg-gray-100',
+    icon: '○',
+    description: 'Profile not yet verified',
+  },
+  basic: {
+    label: 'Basic',
+    color: 'text-blue-700',
+    bg: 'bg-blue-100',
+    icon: '🔵',
+    description: 'Phone number verified',
+  },
+  verified: {
+    label: 'Verified',
+    color: 'text-amber-700',
+    bg: 'bg-amber-100',
+    icon: '🟡',
+    description: 'Identity and profile verified',
+  },
+  trusted: {
+    label: 'Trusted',
+    color: 'text-green-700',
+    bg: 'bg-green-100',
+    icon: '🟢',
+    description: 'Fully verified UK business',
+  },
 }

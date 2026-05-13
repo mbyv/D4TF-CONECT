@@ -4,9 +4,10 @@ import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
-import { Profile, PortfolioItem, ProfileLink, LinkType } from '@/lib/types'
+import { Profile, PortfolioItem, ProfileLink, LinkType, VerificationTier } from '@/lib/types'
 import ErrorMessage from '@/components/ui/ErrorMessage'
 import LoadingSpinner from '@/components/ui/LoadingSpinner'
+import VerificationChecklist from '@/components/profile/VerificationChecklist'
 import { LINK_LABELS, LINK_ICONS } from '@/lib/utils'
 
 const LINK_TYPES: LinkType[] = ['instagram', 'website', 'whatsapp', 'email']
@@ -21,24 +22,41 @@ export default function EditProfilePage() {
   const [links, setLinks] = useState<ProfileLink[]>([])
   const [loadingPage, setLoadingPage] = useState(true)
 
-  // Profile form state
+  // Profile form
   const [name, setName] = useState('')
   const [bio, setBio] = useState('')
   const [city, setCity] = useState('')
-  const [country, setCountry] = useState('')
   const [savingProfile, setSavingProfile] = useState(false)
   const [profileError, setProfileError] = useState('')
   const [profileSuccess, setProfileSuccess] = useState(false)
 
-  // Portfolio state
+  // Portfolio
   const [uploadingImage, setUploadingImage] = useState(false)
   const [portfolioError, setPortfolioError] = useState('')
 
-  // Links state
+  // Links
   const [newLinkType, setNewLinkType] = useState<LinkType>('instagram')
   const [newLinkUrl, setNewLinkUrl] = useState('')
   const [savingLink, setSavingLink] = useState(false)
   const [linkError, setLinkError] = useState('')
+
+  // Phone OTP
+  const [phone, setPhone] = useState('')
+  const [otpSent, setOtpSent] = useState(false)
+  const [otpCode, setOtpCode] = useState('')
+  const [sendingOtp, setSendingOtp] = useState(false)
+  const [verifyingOtp, setVerifyingOtp] = useState(false)
+  const [phoneError, setPhoneError] = useState('')
+  const [phoneSuccess, setPhoneSuccess] = useState(false)
+
+  // Companies House
+  const [chNumber, setChNumber] = useState('')
+  const [chLoading, setChLoading] = useState(false)
+  const [chError, setChError] = useState('')
+  const [chResult, setChResult] = useState<{ company_name: string } | null>(null)
+
+  // Verification tier
+  const [tier, setTier] = useState<VerificationTier>('unverified')
 
   useEffect(() => {
     async function load() {
@@ -57,7 +75,13 @@ export default function EditProfilePage() {
         setName(p.name ?? '')
         setBio(p.bio ?? '')
         setCity(p.city ?? '')
-        setCountry(p.country ?? 'United Kingdom')
+        setPhone(p.phone ?? '')
+        setTier(p.verification_tier ?? 'unverified')
+        if (p.companies_house_name) {
+          setChResult({ company_name: p.companies_house_name })
+          setChNumber(p.companies_house_number ?? '')
+        }
+        if (p.phone_verified) setPhoneSuccess(true)
       }
       setPortfolio((portfolioRes.data ?? []) as PortfolioItem[])
       setLinks((linksRes.data ?? []) as ProfileLink[])
@@ -65,6 +89,12 @@ export default function EditProfilePage() {
     }
     load()
   }, [router, supabase])
+
+  async function refreshTier() {
+    const res = await fetch('/api/verify/check-profile', { method: 'POST' })
+    const json = await res.json()
+    if (json.profile) setTier(json.profile.verification_tier)
+  }
 
   async function saveProfile(e: React.FormEvent) {
     e.preventDefault()
@@ -77,13 +107,95 @@ export default function EditProfilePage() {
 
     const { error } = await supabase
       .from('profiles')
-      .update({ name: name.trim(), bio: bio.trim(), city: city.trim(), country: country.trim() })
+      .update({ name: name.trim(), bio: bio.trim(), city: city.trim(), country: 'United Kingdom' })
       .eq('id', user.id)
 
-    if (error) setProfileError(error.message)
-    else setProfileSuccess(true)
+    if (error) { setProfileError(error.message); setSavingProfile(false); return }
+    setProfileSuccess(true)
     setSavingProfile(false)
+    await refreshTier()
   }
+
+  // ── Phone OTP ──────────────────────────────────────────────────────────────
+
+  async function sendOtp() {
+    setSendingOtp(true)
+    setPhoneError('')
+
+    // Format as E.164 UK number
+    let formatted = phone.trim().replace(/\s/g, '')
+    if (formatted.startsWith('0')) formatted = '+44' + formatted.slice(1)
+    if (!formatted.startsWith('+44')) formatted = '+44' + formatted
+
+    const { error } = await supabase.auth.updateUser({ phone: formatted })
+
+    if (error) {
+      setPhoneError(error.message)
+      setSendingOtp(false)
+      return
+    }
+
+    setPhone(formatted)
+    setOtpSent(true)
+    setSendingOtp(false)
+  }
+
+  async function verifyOtp() {
+    setVerifyingOtp(true)
+    setPhoneError('')
+
+    const { error } = await supabase.auth.verifyOtp({
+      phone,
+      token: otpCode,
+      type: 'phone_change',
+    })
+
+    if (error) {
+      setPhoneError(error.message)
+      setVerifyingOtp(false)
+      return
+    }
+
+    // Mark phone as verified in profiles table
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      await supabase
+        .from('profiles')
+        .update({ phone, phone_verified: true })
+        .eq('id', user.id)
+    }
+
+    setPhoneSuccess(true)
+    setVerifyingOtp(false)
+    setOtpSent(false)
+    await refreshTier()
+  }
+
+  // ── Companies House ────────────────────────────────────────────────────────
+
+  async function verifyCompaniesHouse(e: React.FormEvent) {
+    e.preventDefault()
+    setChLoading(true)
+    setChError('')
+    setChResult(null)
+
+    const res = await fetch('/api/verify/companies-house', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ company_number: chNumber }),
+    })
+    const json = await res.json()
+
+    if (!res.ok) {
+      setChError(json.error ?? 'Verification failed')
+    } else {
+      setChResult({ company_name: json.company_name })
+      await refreshTier()
+    }
+    setChLoading(false)
+  }
+
+  // ── Portfolio ──────────────────────────────────────────────────────────────
 
   async function uploadPortfolioImage(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -98,15 +210,9 @@ export default function EditProfilePage() {
       .from('portfolios')
       .upload(path, file, { upsert: false })
 
-    if (uploadError) {
-      setPortfolioError(uploadError.message)
-      setUploadingImage(false)
-      return
-    }
+    if (uploadError) { setPortfolioError(uploadError.message); setUploadingImage(false); return }
 
-    const { data: { publicUrl } } = supabase.storage
-      .from('portfolios')
-      .getPublicUrl(path)
+    const { data: { publicUrl } } = supabase.storage.from('portfolios').getPublicUrl(path)
 
     const { data: newItem, error: insertError } = await supabase
       .from('portfolio_items')
@@ -115,7 +221,10 @@ export default function EditProfilePage() {
       .single()
 
     if (insertError) setPortfolioError(insertError.message)
-    else setPortfolio((prev) => [newItem as PortfolioItem, ...prev])
+    else {
+      setPortfolio((prev) => [newItem as PortfolioItem, ...prev])
+      await refreshTier()
+    }
 
     setUploadingImage(false)
     if (fileInputRef.current) fileInputRef.current.value = ''
@@ -126,7 +235,10 @@ export default function EditProfilePage() {
     await supabase.storage.from('portfolios').remove([path])
     await supabase.from('portfolio_items').delete().eq('id', item.id)
     setPortfolio((prev) => prev.filter((p) => p.id !== item.id))
+    await refreshTier()
   }
+
+  // ── Links ──────────────────────────────────────────────────────────────────
 
   async function addLink(e: React.FormEvent) {
     e.preventDefault()
@@ -144,6 +256,7 @@ export default function EditProfilePage() {
     else {
       setLinks((prev) => [...prev, newLink as ProfileLink])
       setNewLinkUrl('')
+      await refreshTier()
     }
     setSavingLink(false)
   }
@@ -151,15 +264,21 @@ export default function EditProfilePage() {
   async function deleteLink(id: string) {
     await supabase.from('profile_links').delete().eq('id', id)
     setLinks((prev) => prev.filter((l) => l.id !== id))
+    await refreshTier()
   }
+
+  // ─────────────────────────────────────────────────────────────────────────
 
   if (loadingPage) {
     return (
-      <div className="flex justify-center py-20">
-        <LoadingSpinner />
-      </div>
+      <div className="flex justify-center py-20"><LoadingSpinner /></div>
     )
   }
+
+  const hasFullBio = bio.trim().length >= 40
+  const hasCity = city.trim().length > 0
+  const hasPortfolio = portfolio.length > 0
+  const hasLink = links.length > 0
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -172,7 +291,137 @@ export default function EditProfilePage() {
         </div>
       </nav>
 
-      <div className="max-w-xl mx-auto px-4 py-8 space-y-6">
+      <div className="max-w-xl mx-auto px-4 py-8 space-y-5">
+
+        {/* Verification Checklist */}
+        <VerificationChecklist
+          tier={tier}
+          phoneVerified={profile?.phone_verified ?? false}
+          companiesHouseVerified={profile?.companies_house_verified ?? false}
+          hasFullBio={hasFullBio}
+          hasCity={hasCity}
+          hasPortfolio={hasPortfolio}
+          hasLink={hasLink}
+          role={profile?.role ?? 'brand'}
+        />
+
+        {/* Phone Verification */}
+        <div className="card p-6">
+          <h2 className="text-base font-semibold text-gray-900 mb-1">
+            Phone Verification
+            {profile?.phone_verified && (
+              <span className="ml-2 badge bg-green-100 text-green-700 text-xs">✓ Verified</span>
+            )}
+          </h2>
+          <p className="text-xs text-gray-500 mb-4">
+            We send a one-time code to your UK mobile number. This is the primary way we confirm you&apos;re a real person.
+          </p>
+
+          {profile?.phone_verified ? (
+            <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-700">
+              ✓ Phone number verified: <strong>{profile.phone}</strong>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {!otpSent ? (
+                <div className="flex gap-2">
+                  <input
+                    type="tel"
+                    className="input flex-1"
+                    placeholder="e.g. 07700 900 000"
+                    value={phone}
+                    onChange={(e) => setPhone(e.target.value)}
+                  />
+                  <button
+                    onClick={sendOtp}
+                    className="btn-primary shrink-0"
+                    disabled={sendingOtp || !phone.trim()}
+                  >
+                    {sendingOtp ? 'Sending…' : 'Send code'}
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <p className="text-xs text-gray-500">
+                    A 6-digit code was sent to <strong>{phone}</strong>.
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      className="input flex-1 tracking-widest text-center font-mono"
+                      placeholder="000000"
+                      maxLength={6}
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                    />
+                    <button
+                      onClick={verifyOtp}
+                      className="btn-primary shrink-0"
+                      disabled={verifyingOtp || otpCode.length < 6}
+                    >
+                      {verifyingOtp ? 'Verifying…' : 'Verify'}
+                    </button>
+                  </div>
+                  <button
+                    onClick={() => { setOtpSent(false); setOtpCode('') }}
+                    className="text-xs text-gray-400 hover:text-gray-600"
+                  >
+                    Use a different number
+                  </button>
+                </div>
+              )}
+              {phoneError && <ErrorMessage message={phoneError} />}
+            </div>
+          )}
+        </div>
+
+        {/* Companies House */}
+        <div className="card p-6">
+          <h2 className="text-base font-semibold text-gray-900 mb-1">
+            Companies House
+            {profile?.companies_house_verified && (
+              <span className="ml-2 badge bg-green-100 text-green-700 text-xs">✓ Verified</span>
+            )}
+            <span className="ml-2 badge bg-gray-100 text-gray-500 text-xs">Optional</span>
+          </h2>
+          <p className="text-xs text-gray-500 mb-4">
+            If your business is registered at Companies House, enter your company number below.
+            We check it automatically via the official UK government API.
+            Sole traders and unregistered businesses can skip this.
+          </p>
+
+          {profile?.companies_house_verified ? (
+            <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-700">
+              ✓ <strong>{profile.companies_house_name}</strong> verified ({profile.companies_house_number})
+            </div>
+          ) : (
+            <form onSubmit={verifyCompaniesHouse} className="space-y-3">
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  className="input flex-1 uppercase"
+                  placeholder="e.g. 12345678 or SC123456"
+                  value={chNumber}
+                  onChange={(e) => setChNumber(e.target.value.toUpperCase())}
+                  maxLength={10}
+                />
+                <button
+                  type="submit"
+                  className="btn-primary shrink-0"
+                  disabled={chLoading || !chNumber.trim()}
+                >
+                  {chLoading ? 'Checking…' : 'Verify'}
+                </button>
+              </div>
+              {chError && <ErrorMessage message={chError} />}
+              {chResult && (
+                <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-700">
+                  ✓ <strong>{chResult.company_name}</strong> — active UK company
+                </div>
+              )}
+            </form>
+          )}
+        </div>
 
         {/* Profile Info */}
         <div className="card p-6">
@@ -192,6 +441,11 @@ export default function EditProfilePage() {
                 value={bio}
                 onChange={(e) => setBio(e.target.value)}
               />
+              <div className="flex justify-between mt-1">
+                <p className={`text-xs ${hasFullBio ? 'text-green-600' : 'text-gray-400'}`}>
+                  {hasFullBio ? '✓ Good length' : `${bio.trim().length}/40 characters minimum`}
+                </p>
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
@@ -210,9 +464,7 @@ export default function EditProfilePage() {
               </div>
             </div>
             {profileError && <ErrorMessage message={profileError} />}
-            {profileSuccess && (
-              <p className="text-sm text-green-600 font-medium">Profile saved!</p>
-            )}
+            {profileSuccess && <p className="text-sm text-green-600 font-medium">Profile saved!</p>}
             <button type="submit" className="btn-primary w-full" disabled={savingProfile}>
               {savingProfile ? 'Saving…' : 'Save profile'}
             </button>
@@ -227,7 +479,6 @@ export default function EditProfilePage() {
               ? 'Upload photos of your factory, machinery, or finished garments.'
               : 'Upload lookbook shots or product photos.'}
           </p>
-
           <div className="grid grid-cols-3 gap-2 mb-4">
             {portfolio.map((item) => (
               <div key={item.id} className="relative group aspect-square rounded-lg overflow-hidden bg-gray-100">
@@ -236,25 +487,14 @@ export default function EditProfilePage() {
                 <button
                   onClick={() => deletePortfolioItem(item)}
                   className="absolute top-1 right-1 w-6 h-6 rounded-full bg-red-500 text-white text-xs hidden group-hover:flex items-center justify-center"
-                >
-                  ×
-                </button>
+                >×</button>
               </div>
             ))}
           </div>
-
           {portfolioError && <ErrorMessage message={portfolioError} />}
-
           <label className={`btn-secondary w-full cursor-pointer text-center ${uploadingImage ? 'opacity-50 cursor-not-allowed' : ''}`}>
             {uploadingImage ? 'Uploading…' : '+ Upload image'}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={uploadPortfolioImage}
-              disabled={uploadingImage}
-            />
+            <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={uploadPortfolioImage} disabled={uploadingImage} />
           </label>
         </div>
 
@@ -262,9 +502,9 @@ export default function EditProfilePage() {
         <div className="card p-6">
           <h2 className="text-base font-semibold text-gray-900 mb-1">Contact Links</h2>
           <p className="text-xs text-gray-500 mb-4">
-            Add your Instagram, website, WhatsApp or email so brands/manufacturers can contact you.
+            Add your Instagram, website, WhatsApp or email so{' '}
+            {profile?.role === 'brand' ? 'manufacturers' : 'brands'} can contact you.
           </p>
-
           {links.length > 0 && (
             <div className="space-y-2 mb-4">
               {links.map((link) => (
@@ -272,22 +512,14 @@ export default function EditProfilePage() {
                   <span className="text-sm text-gray-700">
                     {LINK_ICONS[link.type]} <strong>{LINK_LABELS[link.type]}</strong>: {link.url}
                   </span>
-                  <button onClick={() => deleteLink(link.id)} className="text-red-500 text-xs hover:text-red-700 ml-2">
-                    Remove
-                  </button>
+                  <button onClick={() => deleteLink(link.id)} className="text-red-500 text-xs hover:text-red-700 ml-2">Remove</button>
                 </div>
               ))}
             </div>
           )}
-
           {linkError && <ErrorMessage message={linkError} />}
-
           <form onSubmit={addLink} className="flex flex-col sm:flex-row gap-2">
-            <select
-              className="input sm:w-36 shrink-0"
-              value={newLinkType}
-              onChange={(e) => setNewLinkType(e.target.value as LinkType)}
-            >
+            <select className="input sm:w-36 shrink-0" value={newLinkType} onChange={(e) => setNewLinkType(e.target.value as LinkType)}>
               {LINK_TYPES.map((t) => (
                 <option key={t} value={t}>{LINK_ICONS[t]} {LINK_LABELS[t]}</option>
               ))}
@@ -295,12 +527,7 @@ export default function EditProfilePage() {
             <input
               type="text"
               className="input flex-1"
-              placeholder={
-                newLinkType === 'instagram' ? '@yourbrand' :
-                newLinkType === 'whatsapp' ? '+447700000000' :
-                newLinkType === 'email' ? 'you@example.com' :
-                'https://yourwebsite.com'
-              }
+              placeholder={newLinkType === 'instagram' ? '@yourbrand' : newLinkType === 'whatsapp' ? '+447700000000' : newLinkType === 'email' ? 'you@example.com' : 'https://yourwebsite.com'}
               value={newLinkUrl}
               onChange={(e) => setNewLinkUrl(e.target.value)}
               required

@@ -2,8 +2,9 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
-import { Profile, PortfolioItem, ProfileLink, ProductionRequest, Offer } from '@/lib/types'
+import { Profile, PortfolioItem, ProfileLink, ProductionRequest, Offer, VerificationTier } from '@/lib/types'
 import { formatDate, LINK_ICONS, LINK_LABELS, getLinkHref } from '@/lib/utils'
+import VerificationBadge from '@/components/profile/VerificationBadge'
 
 interface Props {
   params: { id: string }
@@ -104,9 +105,10 @@ export default async function ProfilePage({ params }: Props) {
             <div className="flex-1 min-w-0">
               <div className="flex flex-wrap items-center gap-2 mb-1">
                 <h1 className="text-xl font-bold text-gray-900">{profile.name}</h1>
-                {profile.verified && (
-                  <span className="badge bg-blue-100 text-blue-700">✓ Verified</span>
-                )}
+                <VerificationBadge
+                  tier={(profile.verification_tier as VerificationTier) ?? 'unverified'}
+                  size="md"
+                />
                 <span className={`badge ${
                   profile.role === 'brand'
                     ? 'bg-purple-100 text-purple-700'

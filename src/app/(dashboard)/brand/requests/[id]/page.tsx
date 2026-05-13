@@ -2,8 +2,9 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 import { formatDate, formatCurrency, formatQuantity } from '@/lib/utils'
-import { Offer, ProductionRequest, Profile } from '@/lib/types'
+import { Offer, ProductionRequest, Profile, VerificationTier } from '@/lib/types'
 import EmptyState from '@/components/ui/EmptyState'
+import VerificationBadge from '@/components/profile/VerificationBadge'
 
 interface Props {
   params: { id: string }
@@ -95,8 +96,14 @@ export default async function RequestDetailPage({ params }: Props) {
                       </div>
                     )}
                     <div>
-                      <div className="font-semibold text-gray-900 text-sm">
-                        {offer.manufacturer.name}
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className="font-semibold text-gray-900 text-sm">
+                          {offer.manufacturer.name}
+                        </span>
+                        <VerificationBadge
+                          tier={(offer.manufacturer.verification_tier as VerificationTier) ?? 'unverified'}
+                          size="sm"
+                        />
                       </div>
                       <div className="text-xs text-gray-500">
                         {[offer.manufacturer.city, offer.manufacturer.country]
