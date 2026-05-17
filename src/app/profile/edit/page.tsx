@@ -259,7 +259,7 @@ export default function EditProfilePage() {
 
   const hasFullBio = bio.trim().length >= 40
   const hasCity = city.trim().length > 0
-  const hasPortfolio = portfolio.length > 0
+  const hasPortfolio = portfolio.length >= 5
   const hasLink = links.length > 0
 
   return (
@@ -415,10 +415,17 @@ export default function EditProfilePage() {
 
         {/* Portfolio */}
         <div className="card p-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-1">Portfolio Images</h2>
+          <div className="flex items-center justify-between mb-1">
+            <h2 className="text-base font-semibold text-gray-900">Portfolio Images</h2>
+            {profile?.role === 'manufacturer' && (
+              <span className={`text-xs font-semibold ${hasPortfolio ? 'text-green-600' : 'text-gray-400'}`}>
+                {portfolio.length}/5 {hasPortfolio ? '✓' : 'required for Verified'}
+              </span>
+            )}
+          </div>
           <p className="text-xs text-gray-500 mb-4">
             {profile?.role === 'manufacturer'
-              ? 'Upload photos of your factory, machinery, or finished garments.'
+              ? 'Upload at least 5 photos of your factory, machinery, or finished garments to reach Verified status.'
               : 'Upload lookbook shots or product photos.'}
           </p>
           <div className="grid grid-cols-3 gap-2 mb-4">

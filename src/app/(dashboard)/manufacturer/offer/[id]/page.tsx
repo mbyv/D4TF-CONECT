@@ -17,6 +17,7 @@ export default function SendOfferPage() {
 
   const [request, setRequest] = useState<(ProductionRequest & { brand: Profile }) | null>(null)
   const [loadingRequest, setLoadingRequest] = useState(true)
+  const [tier, setTier] = useState<string | null>(null)
 
   const [price, setPrice] = useState('')
   const [message, setMessage] = useState('')
@@ -25,6 +26,16 @@ export default function SendOfferPage() {
 
   useEffect(() => {
     async function load() {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('verification_tier')
+          .eq('id', user.id)
+          .single()
+        setTier(profile?.verification_tier ?? 'unverified')
+      }
+
       const { data } = await supabase
         .from('production_requests')
         .select('*, brand:profiles(*)')
@@ -82,6 +93,8 @@ export default function SendOfferPage() {
     window.location.href = json.checkout_url
   }
 
+  const isVerified = tier === 'verified' || tier === 'trusted'
+
   if (loadingRequest) {
     return (
       <div className="flex justify-center py-20">
@@ -95,6 +108,35 @@ export default function SendOfferPage() {
       <div className="text-center py-20">
         <p className="text-gray-500">Request not found.</p>
         <Link href="/manufacturer" className="btn-primary mt-4">Back to feed</Link>
+      </div>
+    )
+  }
+
+  if (!isVerified) {
+    return (
+      <div className="max-w-xl">
+        <Link href="/manufacturer" className="text-sm text-gray-500 hover:text-gray-700">
+          ← Back to feed
+        </Link>
+        <div className="card p-8 mt-4 text-center">
+          <div className="text-4xl mb-4">🔒</div>
+          <h1 className="text-xl font-bold text-gray-900 mb-2">Verification required</h1>
+          <p className="text-sm text-gray-500 mb-6">
+            You need to be <strong>Verified</strong> before you can send offers to brands.
+            Complete your profile to unlock this feature.
+          </p>
+          <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-sm text-amber-800 text-left mb-6 space-y-1">
+            <p className="font-semibold mb-2">To get Verified you need to:</p>
+            <p>🔵 Verify your UK phone number</p>
+            <p>📝 Write a bio (min. 40 characters)</p>
+            <p>📍 Add your city</p>
+            <p>🔗 Add a contact link (Instagram, WhatsApp, etc.)</p>
+            <p>🖼️ Upload at least 5 portfolio images</p>
+          </div>
+          <Link href="/profile/edit" className="btn-primary w-full">
+            Complete my profile →
+          </Link>
+        </div>
       </div>
     )
   }

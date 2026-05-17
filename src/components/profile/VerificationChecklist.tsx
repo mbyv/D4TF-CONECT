@@ -71,7 +71,7 @@ export default function VerificationChecklist({
             <Item done={hasCity} label="Add your city" />
             <Item done={hasLink} label="Add a contact link (Instagram, WhatsApp, etc.)" />
             {role === 'manufacturer' && (
-              <Item done={hasPortfolio} label="Upload at least 1 portfolio image" />
+              <Item done={hasPortfolio} label="Upload at least 5 portfolio images" />
             )}
           </div>
         </div>
