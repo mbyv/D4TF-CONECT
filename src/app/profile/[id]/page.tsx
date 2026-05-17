@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
-import { Profile, PortfolioItem, ProfileLink, ProductionRequest, Offer, VerificationTier } from '@/lib/types'
+import { Profile, PortfolioItem, ProfileLink, VerificationTier } from '@/lib/types'
 import { formatDate, LINK_ICONS, LINK_LABELS, getLinkHref } from '@/lib/utils'
 import VerificationBadge from '@/components/profile/VerificationBadge'
 

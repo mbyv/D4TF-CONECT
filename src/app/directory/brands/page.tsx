@@ -1,9 +1,10 @@
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/server'
-import { Profile } from '@/lib/types'
+import { Profile, VerificationTier } from '@/lib/types'
 import { formatDate } from '@/lib/utils'
 import EmptyState from '@/components/ui/EmptyState'
+import VerificationBadge from '@/components/profile/VerificationBadge'
 
 export default async function BrandDirectoryPage() {
   const supabase = createClient()
@@ -67,9 +68,10 @@ export default async function BrandDirectoryPage() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 flex-wrap">
                     <span className="font-semibold text-gray-900 text-sm">{brand.name}</span>
-                    {brand.verified && (
-                      <span className="badge bg-blue-100 text-blue-700 text-[10px]">✓</span>
-                    )}
+                    <VerificationBadge
+                      tier={(brand.verification_tier as VerificationTier) ?? 'unverified'}
+                      size="sm"
+                    />
                   </div>
                   {(brand.city || brand.country) && (
                     <p className="text-xs text-gray-500 mt-0.5">

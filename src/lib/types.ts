@@ -109,16 +109,16 @@ export const TIER_CONFIG: Record<VerificationTier, {
   },
   verified: {
     label: 'Verified',
-    color: 'text-amber-700',
-    bg: 'bg-amber-100',
-    icon: '🟡',
-    description: 'Identity and profile verified',
+    color: 'text-green-700',
+    bg: 'bg-green-100',
+    icon: '🟢',
+    description: 'Phone verified & profile complete',
   },
   trusted: {
     label: 'Trusted',
     color: 'text-green-700',
     bg: 'bg-green-100',
     icon: '🟢',
-    description: 'Fully verified UK business',
+    description: 'Fully verified',
   },
 }
