@@ -84,7 +84,7 @@ export default async function BrandDashboard() {
               <Link
                 key={req.id}
                 href={`/brand/requests/${req.id}`}
-                className="card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:shadow-md transition-shadow block"
+                className="card p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 hover:shadow-md transition-shadow"
               >
                 <div className="flex-1 min-w-0">
                   <h3 className="font-semibold text-gray-900 truncate">{req.title}</h3>
