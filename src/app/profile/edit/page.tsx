@@ -49,12 +49,6 @@ export default function EditProfilePage() {
   const [phoneError, setPhoneError] = useState('')
   const [phoneSuccess, setPhoneSuccess] = useState(false)
 
-  // Companies House
-  const [chNumber, setChNumber] = useState('')
-  const [chLoading, setChLoading] = useState(false)
-  const [chError, setChError] = useState('')
-  const [chResult, setChResult] = useState<{ company_name: string } | null>(null)
-
   // Verification tier
   const [tier, setTier] = useState<VerificationTier>('unverified')
 
@@ -77,10 +71,6 @@ export default function EditProfilePage() {
         setCity(p.city ?? '')
         setPhone(p.phone ?? '')
         setTier(p.verification_tier ?? 'unverified')
-        if (p.companies_house_name) {
-          setChResult({ company_name: p.companies_house_name })
-          setChNumber(p.companies_house_number ?? '')
-        }
         if (p.phone_verified) setPhoneSuccess(true)
       }
       setPortfolio((portfolioRes.data ?? []) as PortfolioItem[])
@@ -187,30 +177,6 @@ export default function EditProfilePage() {
     await refreshTier()
   }
 
-  // ── Companies House ────────────────────────────────────────────────────────
-
-  async function verifyCompaniesHouse(e: React.FormEvent) {
-    e.preventDefault()
-    setChLoading(true)
-    setChError('')
-    setChResult(null)
-
-    const res = await fetch('/api/verify/companies-house', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ company_number: chNumber }),
-    })
-    const json = await res.json()
-
-    if (!res.ok) {
-      setChError(json.error ?? 'Verification failed')
-    } else {
-      setChResult({ company_name: json.company_name })
-      await refreshTier()
-    }
-    setChLoading(false)
-  }
-
   // ── Portfolio ──────────────────────────────────────────────────────────────
 
   async function uploadPortfolioImage(e: React.ChangeEvent<HTMLInputElement>) {
@@ -313,7 +279,6 @@ export default function EditProfilePage() {
         <VerificationChecklist
           tier={tier}
           phoneVerified={profile?.phone_verified ?? false}
-          companiesHouseVerified={profile?.companies_house_verified ?? false}
           hasFullBio={hasFullBio}
           hasCity={hasCity}
           hasPortfolio={hasPortfolio}
@@ -397,54 +362,6 @@ export default function EditProfilePage() {
               )}
               {phoneError && <ErrorMessage message={phoneError} />}
             </div>
-          )}
-        </div>
-
-        {/* Companies House */}
-        <div className="card p-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-1">
-            Companies House
-            {profile?.companies_house_verified && (
-              <span className="ml-2 badge bg-green-100 text-green-700 text-xs">✓ Verified</span>
-            )}
-            <span className="ml-2 badge bg-gray-100 text-gray-500 text-xs">Optional</span>
-          </h2>
-          <p className="text-xs text-gray-500 mb-4">
-            If your business is registered at Companies House, enter your company number below.
-            We check it automatically via the official UK government API.
-            Sole traders and unregistered businesses can skip this.
-          </p>
-
-          {profile?.companies_house_verified ? (
-            <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-700">
-              ✓ <strong>{profile.companies_house_name}</strong> verified ({profile.companies_house_number})
-            </div>
-          ) : (
-            <form onSubmit={verifyCompaniesHouse} className="space-y-3">
-              <div className="flex gap-2">
-                <input
-                  type="text"
-                  className="input flex-1 uppercase"
-                  placeholder="e.g. 12345678 or SC123456"
-                  value={chNumber}
-                  onChange={(e) => setChNumber(e.target.value.toUpperCase())}
-                  maxLength={10}
-                />
-                <button
-                  type="submit"
-                  className="btn-primary shrink-0"
-                  disabled={chLoading || !chNumber.trim()}
-                >
-                  {chLoading ? 'Checking…' : 'Verify'}
-                </button>
-              </div>
-              {chError && <ErrorMessage message={chError} />}
-              {chResult && (
-                <div className="rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-700">
-                  ✓ <strong>{chResult.company_name}</strong> — active UK company
-                </div>
-              )}
-            </form>
           )}
         </div>
 

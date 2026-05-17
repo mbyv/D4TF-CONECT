@@ -5,7 +5,6 @@ import { VerificationTier, TIER_CONFIG } from '@/lib/types'
 interface ChecklistProps {
   tier: VerificationTier
   phoneVerified: boolean
-  companiesHouseVerified: boolean
   hasFullBio: boolean
   hasCity: boolean
   hasPortfolio: boolean
@@ -29,7 +28,6 @@ function Item({ done, label }: { done: boolean; label: string }) {
 export default function VerificationChecklist({
   tier,
   phoneVerified,
-  companiesHouseVerified,
   hasFullBio,
   hasCity,
   hasPortfolio,
@@ -48,7 +46,7 @@ export default function VerificationChecklist({
       </div>
 
       <p className="text-xs text-gray-500 mb-4">
-        Complete each step to unlock your next verification tier and build trust with{' '}
+        Complete each step to build trust with{' '}
         {role === 'brand' ? 'manufacturers' : 'brands'}.
       </p>
 
@@ -65,8 +63,8 @@ export default function VerificationChecklist({
 
         {/* Tier 2 — Verified */}
         <div>
-          <p className={`text-xs font-semibold mb-2 ${phoneVerified ? 'text-amber-700' : 'text-gray-400'}`}>
-            🟡 Verified — Complete your profile
+          <p className={`text-xs font-semibold mb-2 ${phoneVerified ? 'text-green-700' : 'text-gray-400'}`}>
+            🟢 Verified — Complete your profile
           </p>
           <div className="pl-2 space-y-1.5">
             <Item done={hasFullBio} label="Write a bio (min. 40 characters)" />
@@ -77,25 +75,12 @@ export default function VerificationChecklist({
             )}
           </div>
         </div>
-
-        {/* Tier 3 — Trusted */}
-        <div>
-          <p className={`text-xs font-semibold mb-2 ${tier === 'verified' || tier === 'trusted' ? 'text-green-700' : 'text-gray-400'}`}>
-            🟢 Trusted — Registered business
-          </p>
-          <div className="pl-2 space-y-1.5">
-            <Item
-              done={companiesHouseVerified}
-              label="Verify Companies House number (if applicable)"
-            />
-          </div>
-        </div>
       </div>
 
-      {tier === 'trusted' && (
+      {tier === 'verified' && (
         <div className="mt-4 pt-4 border-t border-gray-200 text-center">
           <p className="text-sm font-semibold text-green-700">
-            🎉 Fully verified! You have the highest trust level on D4TF Connect.
+            🎉 Fully verified! Your profile is complete.
           </p>
         </div>
       )}
