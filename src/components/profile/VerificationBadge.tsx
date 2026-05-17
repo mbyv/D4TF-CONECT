@@ -3,10 +3,11 @@ import { VerificationTier, TIER_CONFIG } from '@/lib/types'
 interface Props {
   tier: VerificationTier
   size?: 'sm' | 'md'
+  showUnverified?: boolean
 }
 
-export default function VerificationBadge({ tier, size = 'sm' }: Props) {
-  if (tier === 'unverified') return null
+export default function VerificationBadge({ tier, size = 'sm', showUnverified = false }: Props) {
+  if (tier === 'unverified' && !showUnverified) return null
 
   const config = TIER_CONFIG[tier]
   const textSize = size === 'sm' ? 'text-[10px]' : 'text-xs'

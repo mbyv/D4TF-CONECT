@@ -108,6 +108,7 @@ export default async function ProfilePage({ params }: Props) {
                 <VerificationBadge
                   tier={(profile.verification_tier as VerificationTier) ?? 'unverified'}
                   size="md"
+                  showUnverified
                 />
                 <span className={`badge ${
                   profile.role === 'brand'
