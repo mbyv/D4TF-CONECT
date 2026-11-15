@@ -162,13 +162,14 @@ export default function EditProfilePage() {
       return
     }
 
-    // Mark phone as verified in profiles table
-    const { data: { user } } = await supabase.auth.getUser()
-    if (user) {
-      await supabase
-        .from('profiles')
-        .update({ phone, phone_verified: true })
-        .eq('id', user.id)
+    // Mark phone as verified – done server-side, which re-checks the confirmed
+    // number with Supabase Auth (verification fields are locked for clients).
+    const res = await fetch('/api/verify/phone', { method: 'POST' })
+    if (!res.ok) {
+      const { error: apiError } = await res.json().catch(() => ({ error: 'Could not save verification' }))
+      setPhoneError(apiError ?? 'Could not save verification')
+      setVerifyingOtp(false)
+      return
     }
 
     setPhoneSuccess(true)
