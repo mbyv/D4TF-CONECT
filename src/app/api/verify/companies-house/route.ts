@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export async function POST(request: NextRequest) {
   try {
@@ -54,8 +54,10 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Save to profile and refresh tier
-    const { error: updateError } = await supabase
+    // Save to profile and refresh tier. Verification columns are locked for
+    // regular users (migration 004), so this write uses the service role.
+    const admin = createServiceClient()
+    const { error: updateError } = await admin
       .from('profiles')
       .update({
         companies_house_number: cleaned,
@@ -69,7 +71,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Trigger tier recalculation via Supabase RPC
-    await supabase.rpc('refresh_verification_tier', { profile_id: user.id })
+    await admin.rpc('refresh_verification_tier', { profile_id: user.id })
 
     return NextResponse.json({
       verified: true,

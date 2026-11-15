@@ -1,14 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
-import { createClient } from '@/lib/supabase/server'
-import { createClient as createSupabaseAdmin } from '@supabase/supabase-js'
-
-function createServiceClient() {
-  return createSupabaseAdmin(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
-}
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 /**
  * Called by the success page to verify payment and create the offer.
@@ -41,7 +33,9 @@ export async function POST(request: NextRequest) {
       .eq('stripe_session_id', session_id)
       .single()
 
-    if (!payment) {
+    // Only the user who started this checkout may confirm it. Without this check,
+    // anyone holding a session_id could attach someone else's payment to their account.
+    if (!payment || payment.actor_profile_id !== user.id) {
       return NextResponse.json({ error: 'Payment record not found' }, { status: 404 })
     }
 
@@ -69,15 +63,15 @@ export async function POST(request: NextRequest) {
         .from('offers')
         .select('id')
         .eq('request_id', request_id)
-        .eq('manufacturer_id', user.id)
-        .single()
+        .eq('manufacturer_id', payment.actor_profile_id)
+        .maybeSingle()
 
       if (!existingOffer) {
         const { data: newOffer } = await admin
           .from('offers')
           .insert({
             request_id,
-            manufacturer_id: user.id,
+            manufacturer_id: payment.actor_profile_id,
             price,
             message,
           })

@@ -1,6 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe, ACTION_PRICES, ACTION_LABELS } from '@/lib/stripe'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
+
+/** Which role is allowed to perform each paid/free action. */
+const ACTION_ROLES: Record<string, 'brand' | 'manufacturer'> = {
+  brand_send_request: 'brand',
+  manufacturer_send_offer: 'manufacturer',
+}
+
+const MAX_MESSAGE_LENGTH = 5000
 
 export async function POST(request: NextRequest) {
   try {
@@ -19,18 +27,72 @@ export async function POST(request: NextRequest) {
       offer_message?: string
     }
 
-    if (!action_type) {
-      return NextResponse.json({ error: 'action_type is required' }, { status: 400 })
+    const requiredRole = ACTION_ROLES[action_type]
+    if (!requiredRole) {
+      return NextResponse.json({ error: 'Unsupported action_type' }, { status: 400 })
+    }
+
+    // Payment records and offers are written with the service role (users have no
+    // write access to these tables), so every check RLS used to do happens here.
+    const admin = createServiceClient()
+
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single()
+
+    if (profile?.role !== requiredRole) {
+      return NextResponse.json({ error: 'Your account type cannot perform this action' }, { status: 403 })
+    }
+
+    let pendingOfferData: { request_id: string; price: number; message: string } | null = null
+
+    if (action_type === 'manufacturer_send_offer') {
+      const price = Number(offer_price)
+      const message = (offer_message ?? '').trim()
+
+      if (!related_request_id) {
+        return NextResponse.json({ error: 'related_request_id is required' }, { status: 400 })
+      }
+      if (!Number.isFinite(price) || price < 0) {
+        return NextResponse.json({ error: 'Offer price must be a positive number' }, { status: 400 })
+      }
+      if (!message || message.length > MAX_MESSAGE_LENGTH) {
+        return NextResponse.json({ error: 'Offer message is required (max 5000 characters)' }, { status: 400 })
+      }
+
+      const { data: productionRequest } = await admin
+        .from('production_requests')
+        .select('id')
+        .eq('id', related_request_id)
+        .single()
+
+      if (!productionRequest) {
+        return NextResponse.json({ error: 'Production request not found' }, { status: 404 })
+      }
+
+      const { data: existingOffer } = await admin
+        .from('offers')
+        .select('id')
+        .eq('request_id', related_request_id)
+        .eq('manufacturer_id', user.id)
+        .maybeSingle()
+
+      if (existingOffer) {
+        return NextResponse.json({ error: 'You have already sent an offer for this request.' }, { status: 409 })
+      }
+
+      pendingOfferData = { request_id: related_request_id, price, message }
     }
 
     const amountPence = ACTION_PRICES[action_type] ?? 300
     const label = ACTION_LABELS[action_type] ?? 'D4TF Connect Action'
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
 
-    // If the action is free, skip Stripe entirely and create the resource directly
+    // If the action is free, skip Stripe entirely and just record it
     if (amountPence === 0) {
-      // e.g. brand_send_request is free — just record it
-      const { data: payment, error: paymentError } = await supabase
+      const { data: payment, error: paymentError } = await admin
         .from('actions_payments')
         .insert({
           action_type,
@@ -50,18 +112,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ free: true, payment_id: payment.id })
     }
 
-    // Store pending offer data in the payment record so the webhook can create the offer
-    const pendingOfferData =
-      action_type === 'manufacturer_send_offer'
-        ? {
-            request_id: related_request_id,
-            price: offer_price,
-            message: offer_message,
-          }
-        : null
-
-    // Create pending payment record first
-    const { data: pendingPayment, error: pendingError } = await supabase
+    // Create pending payment record first; the offer payload is parked here
+    // until Stripe confirms payment (webhook / confirm-session create the offer).
+    const { data: pendingPayment, error: pendingError } = await admin
       .from('actions_payments')
       .insert({
         action_type,
@@ -106,7 +159,7 @@ export async function POST(request: NextRequest) {
     })
 
     // Save session ID to the payment record
-    await supabase
+    await admin
       .from('actions_payments')
       .update({
         stripe_session_id: session.id,

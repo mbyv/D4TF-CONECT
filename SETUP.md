@@ -13,6 +13,8 @@
 1. Create a project at [supabase.com](https://supabase.com)
 2. Go to **SQL Editor** → paste and run the full contents of `supabase/migrations/001_initial_schema.sql`
 3. That creates all 6 tables, RLS policies, triggers, indexes, and the `portfolios` storage bucket
+4. Then run the remaining migrations **in order**: `002_verification.sql`, `003_portfolio_min5.sql`, `004_security_hardening.sql`
+   (004 locks payments, offers and verification fields so only server code can write them — deploy the app code before running it)
 
 **Supabase keys you need** (Project Settings → API):
 - `NEXT_PUBLIC_SUPABASE_URL`
